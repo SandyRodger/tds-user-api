@@ -111,10 +111,108 @@ final class UserController extends AbstractController
 
 - At this point the entire stack is working correctly end-to-end. Browser -> nginx -> PHP controller -> repository -> database -> JSON reposponse
 
-### Docker metaphor
+### Docker metaphor -> The Magical University
 
 Docker is a company run by Faeries. They let you rent out pop-up tents in which you can set up any kind of work process you need. They have custom tents, like kitchens, or workshops, or you can customise your own. In these tents there are Faeries doing the work. Humans are not allowed in because the air is poisonous to humans. The tents have an inner and an outer wall. In order to pass things in and out there are hatches and tubes that connect them. Two different outer hatches can lead to the same inner hatch. Outer hatches have 4 digit numbers (8080), inner hatches have 2 digit numbers (80), so a tube might be referred to as 8080:80. The Faeries themselves exist on 2 plains of reality. The Fairie dimention is a vast ocean with small islands. Each island represents a Docker project. On such an island the physical world disappears. This means that Faeries can wander out to other tents on the island, right up to the inner wall hatch and pass in and retrieve what they need to. Then they wander back and shimmer into the human realm if they need to do something there.
 
+## 24_8_26
+
 ### entity manager -> create
 
-- 
+```src/Controller/UserController.php 
+    public function create(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $data = $request->toArray();
+    }
+```
+
+- red squiggly-lines side-quest. Docker wasn't running - then my mac couldn't see the `vendor/` folder which the container can. So the app runs via Docker, but VSCode reads it as 'class not found'. The Symfony and Doctrine classes are installed inside the PHP container (or a path the Mac's PHP tooling is pointed at), but the editor can't see it do it says "this class doesn't exst", even though the code runs just fine. (In the magical university, this is an administrator standing outside the tents, with a clipboard, panicing because he can't see the things his clipboard says muct be here, ebcause they're in the Faerie tent labelled 'PHP', which is inaccessible to humans.
+
+- when creating the `user` object you create it without any data, then use the `set` methods like this:
+
+```src/Controller/UserController.php
+        $data = $request->toArray();
+        $user = new User();
+        $user->setEmail($data['email']);
+        $user->setFirstName($data['firstName']);
+        $user->setLastName($data['lastName']);
+        $user->setCreatedAt(new \DateTimeImmutable()); <= this property is non-nullable so has to be set. The DatTimeImmutable without arguments defaults to now.
+```
+
+- At this point the `user` object exists in memory, but not in the database , so we need to save it with the entity manager `$em`.
+
+```
+$em->persist($user) <= "start tracking this object, i intend to save it"
+$em->flush(); <= "now actually write everything to the database" This is the moment Doctrine talks to the DB. You can persist several objects and then flush() them all together
+```
+
+- The `persist` & `flush` work flow mirrors git commit & push exactly.
+- and it should return a JSON response object to fufill the typing hint. SO full method:
+
+```
+    public function create(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $data = $request->toArray();
+        $user = new User();
+        $user->setEmail($data['email']);
+        $user->setFirstName($data['firstName']);
+        $user->setLastName($data['lastName']);
+        $user->setCreatedAt(new \DateTimeImmutable());
+
+        return $this->json($user);
+    }
+```
+
+- Then tried testing this with a `POST` method in Postman, but because the properties are created private, with public getter methods. But I have to install the Serializer to make those public getters accessible.
+  - Installing a brand new package is a job for the package manager - the one that pulls code down and adds it to `vendor/`
+  - Composer with `require`
+  - `docker compose exec php composer require symfony/serializer-pack`
+  - (hammer home that compose and composer are not the same)
+  - it didn;t work because: `OCI runtime exec failed: exec failed: unable to start container process: exec: "composer": executable file not found in $PATH: unknown`
+  - this indicates that `composer` doesn't exist within the container, so I should run it on my machine, and it will be mirrored in the container:
+  - `composer require symfony/serializer-pack`
+
+
+```UserController.php
+<?php
+
+namespace App\Controller;
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Routing\Attribute\Route;
+use App\Repository\UserRepository;
+use App\Entity\User;
+use Symfony\Component\HttpFoundation\Request;
+use Doctrine\ORM\EntityManagerInterface;
+
+final class UserController extends AbstractController
+{
+    #[Route('/user', name: 'app_user', methods: ['GET'])]
+    public function index(UserRepository $repo): JsonResponse
+    {
+        return $this->json($repo->findAll());
+    }
+
+    #[Route('/user', name: 'app_user_create', methods: ['POST'])]
+    public function create(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $data = $request->toArray();
+        $user = new User();
+        $user->setEmail($data['email']);
+        $user->setFirstName($data['firstName']);
+        $user->setLastName($data['lastName']);
+        $user->setCreatedAt(new \DateTimeImmutable());
+
+        $em->persist($user);
+        $em->flush();
+
+        return $this->json($user);
+    }
+}
+```
+
+### DELETE
+
+
+- bug: there was an invisible, zero-width character at the end of my ROUTE file blowing up Postman. Probably introduced by a copy/paste
