@@ -216,3 +216,13 @@ final class UserController extends AbstractController
 
 
 - bug: there was an invisible, zero-width character at the end of my ROUTE file blowing up Postman. Probably introduced by a copy/paste
+
+### Namespacing rule
+
+- Take the file's path under `src`.
+- Swap `src` for `App`.
+- use `\` instead of `/`
+- The namespace is the folder path
+- The class name = the file name without .php
+- For example:
+  - src/Service/UserService.php -> App\Service\UserService
