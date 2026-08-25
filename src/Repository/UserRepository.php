@@ -31,6 +31,17 @@ class UserRepository extends ServiceEntityRepository
     //        ;
     //    }
 
+    public function findByEmail(string $email): ?User
+    {
+        return $this->findOneBy(['email' => $email]);
+    }
+
+
+    public function findLatestUsers(): array
+    {
+        return $this->findBy([], ['createdAt' => 'DESC']);
+        ;
+    }
     //    public function findOneBySomeField($value): ?User
     //    {
     //        return $this->createQueryBuilder('u')
