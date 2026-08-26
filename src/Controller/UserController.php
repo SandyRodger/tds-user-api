@@ -9,6 +9,7 @@ use App\Repository\UserRepository;
 use App\Entity\User;
 use Symfony\Component\HttpFoundation\Request;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Service\UserService;
 
 final class UserController extends AbstractController
 {
@@ -19,51 +20,36 @@ final class UserController extends AbstractController
     }
 
     #[Route('/user', name: 'app_user_create', methods: ['POST'])] 
-    public function create(Request $request, EntityManagerInterface $em): JsonResponse
+    public function create(Request $request, UserService $userService): JsonResponse
     {
         $data = $request->toArray();
-        $user = new User();
-        $user->setEmail($data['email']);
-        $user->setFirstName($data['firstName']);
-        $user->setLastName($data['lastName']);
-        $user->setCreatedAt(new \DateTimeImmutable());
+        $user = $userService->createUser($data);
 
-        $em->persist($user);
-        $em->flush();
-
-        return $this->json($user);
+        return $this->json($user, 201);
     }
 
     #[Route('/user/{id}', name: 'app_user_delete', methods: ['DELETE'])]
-    public function delete(UserRepository $repo, EntityManagerInterface $em, int $id): JsonResponse
+    public function delete(UserService $userService, int $id): JsonResponse
     {
-        $user = $repo->find($id);
+        $deleted = $userService->deleteUser($id);
 
-        if (!$user) {
+        if (!$deleted) {
             return $this->json(['error' => 'User not found'], 404);
         }
-        $em->remove($user);
-        $em->flush();
 
         return $this->json(['status' => 'deleted']);
     }
 
     #[Route('/user/{id}', name: 'app_user_update', methods: ['PATCH'])]
-    public function update(int $id, Request $request, UserRepository $repo, EntityManagerInterface $em): JsonResponse
+    public function update(int $id, Request $request, UserService $userService): JsonResponse
     {
-        $user = $repo->find($id);
+        $data = $request->toArray();
+        $updated = $userService->updateUser($data, $id);
 
-        if (!$user) {
+        if (!$updated) {
             return $this->json(['error' => 'User not found'], 404);
         }
 
-        $data = $request->toArray();
-        $user->setEmail($data['email'] ?? $user->getEmail());
-        $user->setFirstName($data['firstName'] ?? $user->getFirstName());
-        $user->setLastName($data['lastName'] ?? $user->getLastName());
-
-        $em->flush();
-
-        return $this->json($user);
+        return $this->json($updated);
     }
 }
