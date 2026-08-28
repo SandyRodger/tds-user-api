@@ -60,8 +60,9 @@ public function updateUser(array $data, int $id): ?User
     return $user;
 }
 
-public function getUser(int $id): bool
+public function getUser(int $id): ?User
 {
+    return $this->userRepository->find($id);
 
 }
 

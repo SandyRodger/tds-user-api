@@ -13,10 +13,22 @@ use App\Service\UserService;
 
 final class UserController extends AbstractController
 {
-    #[Route('/user', name: 'app_user', methods: ['GET'])]
+    #[Route('/user', name: 'app_user_all', methods: ['GET'])]
     public function index(UserRepository $repo): JsonResponse
     {
         return $this->json($repo->findLatestUsers());
+    }
+
+    #[Route('/user/{id}', name: 'app_user_one', methods: ['GET'])]
+    public function showUser(int $id, UserService $userService): JsonResponse
+    {
+        $user = $userService->getUser($id);
+
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], 404);
+        }
+
+        return $this->json($user);
     }
 
     #[Route('/user', name: 'app_user_create', methods: ['POST'])] 
